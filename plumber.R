@@ -25,9 +25,10 @@ function() {
     list(status = "ok", service = "bc-forecast", version = "1.0", model = "R-forecast")
 }
 
-#* Forecast endpoint (formato Azure ML Studio Classic, compatible con BC Time Series Management)
-#* @post /execute
-function(req, res) {
+# Handler compartido entre /execute y /services.azureml.net/workspaces/<id>/execute
+# (BC's AzureMLHelper.ValidateUri exige el path "services.azureml.net/workspaces/<guid>",
+#  y luego concatena "/execute?api-version=2.0&details=true" en la request)
+handle_forecast <- function(req, res) {
     body <- tryCatch(
         fromJSON(req$postBody, simplifyDataFrame = FALSE, simplifyVector = FALSE),
         error = function(e) NULL
@@ -88,3 +89,12 @@ function(req, res) {
         )
     )
 }
+
+#* Forecast endpoint clasico (tests directos)
+#* @post /execute
+function(req, res) { handle_forecast(req, res) }
+
+#* Endpoint compatible con BC: BC valida que la URL contenga 'services.azureml.net/workspaces/<guid>'
+#* y concatena '/execute?api-version=2.0&details=true' antes de POSTear.
+#* @post /services.azureml.net/workspaces/<workspaceId>/execute
+function(workspaceId, req, res) { handle_forecast(req, res) }
